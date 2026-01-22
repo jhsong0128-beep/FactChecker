@@ -298,8 +298,8 @@ export default function VerifyPage() {
       const data = await response.json();
       setResult(data);
     } catch (error) {
-      console.error('검증 오류:', error);
-      // 백엔드가 없을 때 검색어 기반 fallback
+      console.error('백엔드 서버가 없어 시뮬레이션 모드로 작동합니다:', error);
+      // 백엔드가 없을 때 검색어 기반 fallback (조용히 처리)
       setResult(getFallbackData(content));
     } finally {
       setIsLoading(false);
