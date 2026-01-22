@@ -279,7 +279,7 @@ export default function VerifyPage() {
     
     try {
       // 백엔드 API 호출
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
       const response = await fetch(`${API_URL}/api/verify`, {
         method: 'POST',
         headers: {
