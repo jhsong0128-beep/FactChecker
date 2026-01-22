@@ -1,12 +1,14 @@
+import Link from 'next/link'
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Header */}
       <header className="container mx-auto px-4 py-6">
         <nav className="flex justify-between items-center">
-          <div className="text-2xl font-bold text-primary-600">
+          <Link href="/" className="text-2xl font-bold text-primary-600">
             FactChecker
-          </div>
+          </Link>
           <div className="space-x-6">
             <a href="#features" className="text-gray-600 hover:text-primary-600">
               기능
@@ -14,9 +16,9 @@ export default function Home() {
             <a href="#how-it-works" className="text-gray-600 hover:text-primary-600">
               작동 방식
             </a>
-            <button className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+            <Link href="/verify" className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition inline-block">
               시작하기
-            </button>
+            </Link>
           </div>
         </nav>
       </header>
@@ -32,12 +34,12 @@ export default function Home() {
           출처 검증부터 도서관 자료 추천까지, 모든 것이 한 곳에서.
         </p>
         <div className="flex gap-4 justify-center">
-          <button className="px-8 py-4 bg-primary-600 text-white text-lg rounded-lg hover:bg-primary-700 transition shadow-lg">
+          <Link href="/register" className="px-8 py-4 bg-primary-600 text-white text-lg rounded-lg hover:bg-primary-700 transition shadow-lg inline-block">
             무료로 시작하기
-          </button>
-          <button className="px-8 py-4 bg-white text-primary-600 text-lg rounded-lg border-2 border-primary-600 hover:bg-primary-50 transition">
+          </Link>
+          <Link href="/verify" className="px-8 py-4 bg-white text-primary-600 text-lg rounded-lg border-2 border-primary-600 hover:bg-primary-50 transition inline-block">
             데모 보기
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -217,9 +219,9 @@ export default function Home() {
           <p className="text-xl mb-8 opacity-90">
             무료로 가입하고 매일 10회까지 정보를 검증할 수 있습니다.
           </p>
-          <button className="px-8 py-4 bg-white text-primary-600 text-lg rounded-lg hover:bg-gray-100 transition shadow-lg">
+          <Link href="/register" className="inline-block px-8 py-4 bg-white text-primary-600 text-lg rounded-lg hover:bg-gray-100 transition shadow-lg">
             무료로 시작하기
-          </button>
+          </Link>
         </div>
       </section>
 
