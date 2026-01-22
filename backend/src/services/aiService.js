@@ -1,8 +1,16 @@
 const OpenAI = require('openai');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// OpenAI 인스턴스는 필요할 때만 생성
+let openai = null;
+
+function getOpenAI() {
+  if (!openai && process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your-openai-api-key-here') {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+  }
+  return openai;
+}
 
 const SYSTEM_PROMPT = `당신은 정보 검증 전문가입니다. 주어진 정보를 분석하고 다음 형식으로 응답해주세요:
 
@@ -26,13 +34,15 @@ const SYSTEM_PROMPT = `당신은 정보 검증 전문가입니다. 주어진 정
 
 async function analyzeContent(content) {
   try {
+    const client = getOpenAI();
+    
     // OpenAI API가 없으면 시뮬레이션 데이터 반환
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your-openai-api-key-here') {
+    if (!client) {
       console.log('⚠️ OpenAI API key not configured, using simulation mode');
       return simulateAIAnalysis(content);
     }
 
-    const completion = await openai.chat.completions.create({
+    const completion = await client.chat.completions.create({
       model: "gpt-4-turbo-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
