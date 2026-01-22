@@ -8,7 +8,14 @@ async function searchBooks(query) {
   try {
     console.log('📚 Searching books for:', query);
     
-    // 알라딘 도서 검색 API (키 불필요, 실제 데이터)
+    // 카카오 도서 검색 API (실제 데이터!)
+    const kakaoResults = await searchFromKakao(query);
+    if (kakaoResults && kakaoResults.length > 0) {
+      console.log(`✅ Found ${kakaoResults.length} books from Kakao`);
+      return kakaoResults;
+    }
+
+    // 알라딘 도서 검색 API (백업)
     const aladinResults = await searchFromAladin(query);
     if (aladinResults && aladinResults.length > 0) {
       console.log(`✅ Found ${aladinResults.length} books from Aladin`);
@@ -69,12 +76,60 @@ async function getLibraryInfo(isbn) {
   }
 }
 
-// 알라딘 도서 검색 (API 키 불필요, 실제 데이터!)
+// 카카오 도서 검색 API (실제 데이터!)
+async function searchFromKakao(query) {
+  try {
+    if (!process.env.KAKAO_API_KEY || process.env.KAKAO_API_KEY === 'your-kakao-api-key-here') {
+      console.log('⚠️ Kakao API key not configured');
+      return [];
+    }
+
+    const response = await axios.get('https://dapi.kakao.com/v3/search/book', {
+      params: {
+        query: query,
+        size: 10,
+        target: 'title'
+      },
+      headers: {
+        'Authorization': `KakaoAK ${process.env.KAKAO_API_KEY}`
+      },
+      timeout: 5000
+    });
+
+    if (response.data && response.data.documents && response.data.documents.length > 0) {
+      return response.data.documents.map((book, index) => ({
+        id: Date.now() + index,
+        title: book.title,
+        author: book.authors ? book.authors.join(', ') : '저자 미상',
+        publisher: book.publisher || '출판사 미상',
+        year: book.datetime ? book.datetime.substring(0, 4) : new Date().getFullYear().toString(),
+        type: 'book',
+        thumbnail: book.thumbnail || '📚',
+        isbn: book.isbn || '',
+        summary: book.contents || `${book.title}에 대한 도서입니다.`,
+        library: {
+          available: true,
+          locations: ['전국 도서관', '온라인 서점']
+        },
+        url: book.url,
+        price: book.price || 0,
+        sale_price: book.sale_price || 0
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error('⚠️ Kakao API error:', error.message);
+    return [];
+  }
+}
+
+// 알라딘 도서 검색 (백업용)
 async function searchFromAladin(query) {
   try {
     const response = await axios.get('http://www.aladin.co.kr/ttb/api/ItemSearch.aspx', {
       params: {
-        ttbkey: 'ttbkurz091551001',  // 테스트키 (실제 운영시 발급 필요)
+        ttbkey: 'ttbkurz091551001',  // 테스트키
         Query: query,
         QueryType: 'Title',
         MaxResults: 5,
