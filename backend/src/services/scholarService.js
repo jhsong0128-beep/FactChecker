@@ -99,6 +99,12 @@ function simulateAcademicSearch(query) {
 // RISS 학술연구정보서비스 검색 (무료 공개 API)
 async function searchRISS(query) {
   try {
+    // RISS 웹 스크래핑 직접 시도
+    const scrapedResults = await scrapeRISS(query);
+    if (scrapedResults && scrapedResults.length > 0) {
+      return scrapedResults;
+    }
+
     // RISS OpenAPI (무료)
     const response = await axios.get('http://www.riss.kr/openapi/search', {
       params: {
@@ -120,9 +126,8 @@ async function searchRISS(query) {
     return [];
 
   } catch (error) {
-    console.error('⚠️ RISS API error:', error.message);
-    // RISS API 실패 시 웹 크롤링 시도
-    return await scrapeRISS(query);
+    console.error('⚠️ RISS search completely failed:', error.message);
+    return [];
   }
 }
 
@@ -151,49 +156,81 @@ function parseRISSResponse(data) {
   }
 }
 
-// RISS 웹 크롤링 (API 실패 시)
+// RISS 웹 크롤링 (실제 데이터!)
 async function scrapeRISS(query) {
   try {
-    const searchUrl = `http://www.riss.kr/search/Search.do?queryText=${encodeURIComponent(query)}`;
+    // RISS 검색 - 더 간단한 엔드포인트 사용
+    const searchUrl = `http://www.riss.kr/search/Search.do`;
     const response = await axios.get(searchUrl, {
-      timeout: 5000,
+      params: {
+        'queryText': query,
+        'searchGubun': 'true',
+        'viewYn': 'OP',
+        'queryType': 'keyword'
+      },
+      timeout: 8000,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
       }
     });
 
     const $ = cheerio.load(response.data);
     const results = [];
 
-    // RISS 검색 결과 파싱
-    $('.srchResultListW .cont').slice(0, 5).each((index, element) => {
-      const title = $(element).find('.title').text().trim();
-      const author = $(element).find('.writer').text().trim();
-      
-      if (title) {
-        results.push({
-          id: Date.now() + index,
-          title: title,
-          author: author || '저자 미상',
-          publisher: '학술지',
-          year: new Date().getFullYear().toString(),
-          type: 'academic',
-          thumbnail: '📄',
-          doi: '',
-          summary: `${title.substring(0, 100)}에 대한 연구 논문입니다.`,
-          library: {
-            available: true,
-            locations: ['RISS']
-          }
-        });
-      }
-    });
+    // 다양한 선택자 시도
+    const selectors = [
+      '.srchResultListW li',
+      '.search-result-item',
+      'li.result-item',
+      '.list-group-item'
+    ];
 
-    console.log(`✅ Scraped ${results.length} papers from RISS`);
-    return results;
+    for (const selector of selectors) {
+      $(selector).slice(0, 5).each((index, element) => {
+        const $el = $(element);
+        const title = $el.find('.title, h5, strong').first().text().trim() ||
+                     $el.find('a').first().text().trim();
+        const author = $el.find('.writer, .author, .creator').text().trim();
+        const publisher = $el.find('.issName, .publisher').text().trim();
+        const year = $el.find('.year, .date').text().trim() || 
+                    $el.text().match(/\d{4}/)?.[0] || 
+                    new Date().getFullYear().toString();
+        
+        if (title && title.length > 5 && !results.find(r => r.title === title)) {
+          results.push({
+            id: Date.now() + index + Math.random(),
+            title: title,
+            author: author || '저자 미상',
+            publisher: publisher || 'RISS',
+            year: year.toString().substring(0, 4),
+            type: 'academic',
+            thumbnail: '📄',
+            doi: '',
+            summary: `${title.substring(0, 150)}... (RISS 학술논문)`,
+            library: {
+              available: true,
+              locations: ['RISS 원문제공']
+            },
+            url: 'http://www.riss.kr'
+          });
+        }
+      });
+
+      if (results.length >= 3) break;
+    }
+
+    if (results.length > 0) {
+      console.log(`✅ Scraped ${results.length} papers from RISS (실제 데이터!)`);
+      return results;
+    }
+
+    console.log('⚠️ RISS scraping found no results');
+    return [];
 
   } catch (error) {
-    console.error('⚠️ RISS scraping also failed:', error.message);
+    console.error('⚠️ RISS scraping failed:', error.message);
     return [];
   }
 }

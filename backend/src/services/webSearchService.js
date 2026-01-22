@@ -1,8 +1,17 @@
 const axios = require('axios');
 
-// Google Custom Search API
+// DuckDuckGo Instant Answer API (API 키 불필요!)
 async function searchWeb(query) {
   try {
+    console.log('🌐 Searching web for:', query);
+    
+    // DuckDuckGo Instant Answer API (무료, 키 불필요)
+    const duckResults = await searchDuckDuckGo(query);
+    if (duckResults && duckResults.length > 0) {
+      console.log(`✅ Found ${duckResults.length} web results from DuckDuckGo`);
+      return duckResults;
+    }
+
     // Google Custom Search API 사용
     if (process.env.GOOGLE_SEARCH_API_KEY && 
         process.env.GOOGLE_SEARCH_ENGINE_ID &&
@@ -27,6 +36,64 @@ async function searchWeb(query) {
   } catch (error) {
     console.error('❌ Web search error:', error.message);
     return simulateWebSearch(query);
+  }
+}
+
+// DuckDuckGo 검색 (API 키 불필요, 실제 데이터!)
+async function searchDuckDuckGo(query) {
+  try {
+    const response = await axios.get('https://api.duckduckgo.com/', {
+      params: {
+        q: query,
+        format: 'json',
+        no_html: 1,
+        skip_disambig: 1
+      },
+      timeout: 5000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    const results = [];
+    
+    // Abstract 추가
+    if (response.data.Abstract) {
+      results.push({
+        id: Date.now(),
+        title: response.data.Heading || query,
+        author: response.data.AbstractSource || 'DuckDuckGo',
+        year: new Date().getFullYear().toString(),
+        type: 'web',
+        thumbnail: '🌐',
+        url: response.data.AbstractURL || 'https://duckduckgo.com/?q=' + encodeURIComponent(query),
+        summary: response.data.Abstract
+      });
+    }
+
+    // RelatedTopics 추가
+    if (response.data.RelatedTopics && response.data.RelatedTopics.length > 0) {
+      response.data.RelatedTopics.slice(0, 4).forEach((topic, index) => {
+        if (topic.Text && topic.FirstURL) {
+          results.push({
+            id: Date.now() + index + 1,
+            title: topic.Text.substring(0, 100),
+            author: new URL(topic.FirstURL).hostname,
+            year: new Date().getFullYear().toString(),
+            type: 'web',
+            thumbnail: topic.Icon?.URL || '🌐',
+            url: topic.FirstURL,
+            summary: topic.Text
+          });
+        }
+      });
+    }
+
+    return results;
+
+  } catch (error) {
+    console.error('⚠️ DuckDuckGo API error:', error.message);
+    return [];
   }
 }
 

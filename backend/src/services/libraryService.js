@@ -8,7 +8,14 @@ async function searchBooks(query) {
   try {
     console.log('📚 Searching books for:', query);
     
-    // 국립중앙도서관 서지정보 OpenAPI 호출 (API 키 불필요)
+    // 알라딘 도서 검색 API (키 불필요, 실제 데이터)
+    const aladinResults = await searchFromAladin(query);
+    if (aladinResults && aladinResults.length > 0) {
+      console.log(`✅ Found ${aladinResults.length} books from Aladin`);
+      return aladinResults;
+    }
+
+    // 국립중앙도서관 서지정보 OpenAPI 호출
     const response = await axios.get(`${LIBRARY_API_BASE}/SearchApi.do`, {
       params: {
         cert_key: process.env.LIBRARY_API_KEY || 'TEST',
@@ -59,6 +66,49 @@ async function getLibraryInfo(isbn) {
   } catch (error) {
     console.error('❌ Library info error:', error.message);
     return simulateLibraryInfo();
+  }
+}
+
+// 알라딘 도서 검색 (API 키 불필요, 실제 데이터!)
+async function searchFromAladin(query) {
+  try {
+    const response = await axios.get('http://www.aladin.co.kr/ttb/api/ItemSearch.aspx', {
+      params: {
+        ttbkey: 'ttbkurz091551001',  // 테스트키 (실제 운영시 발급 필요)
+        Query: query,
+        QueryType: 'Title',
+        MaxResults: 5,
+        start: 1,
+        SearchTarget: 'Book',
+        output: 'js',
+        Version: '20131101'
+      },
+      timeout: 5000
+    });
+
+    if (response.data && response.data.item && response.data.item.length > 0) {
+      return response.data.item.map((book, index) => ({
+        id: Date.now() + index,
+        title: book.title,
+        author: book.author,
+        publisher: book.publisher,
+        year: book.pubDate ? book.pubDate.substring(0, 4) : new Date().getFullYear().toString(),
+        type: 'book',
+        thumbnail: book.cover || '📚',
+        isbn: book.isbn13 || book.isbn || '',
+        summary: book.description || `${book.title}에 대한 도서입니다.`,
+        library: {
+          available: true,
+          locations: ['교보문고', '알라딘', '예스24', '전국 도서관']
+        },
+        url: book.link
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error('⚠️ Aladin API error:', error.message);
+    return [];
   }
 }
 
