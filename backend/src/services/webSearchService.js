@@ -1,11 +1,18 @@
 const axios = require('axios');
 
-// DuckDuckGo Instant Answer API (API 키 불필요!)
+// 네이버 웹 검색 API를 통한 실제 웹 자료 검색
 async function searchWeb(query) {
   try {
     console.log('🌐 Searching web for:', query);
     
-    // DuckDuckGo Instant Answer API (무료, 키 불필요)
+    // 네이버 웹 검색 API 호출 (실제 데이터!)
+    const naverResults = await searchNaverWeb(query);
+    if (naverResults && naverResults.length > 0) {
+      console.log(`✅ Found ${naverResults.length} web results from Naver`);
+      return naverResults;
+    }
+
+    // 네이버 실패 시 DuckDuckGo
     const duckResults = await searchDuckDuckGo(query);
     if (duckResults && duckResults.length > 0) {
       console.log(`✅ Found ${duckResults.length} web results from DuckDuckGo`);
@@ -30,12 +37,113 @@ async function searchWeb(query) {
     }
 
     // 시뮬레이션 데이터
-    console.log('⚠️ Google Search API key not configured, using simulation mode');
+    console.log('⚠️ All web search APIs unavailable, using simulation mode');
     return simulateWebSearch(query);
 
   } catch (error) {
     console.error('❌ Web search error:', error.message);
     return simulateWebSearch(query);
+  }
+}
+
+// 네이버 웹 검색 API (뉴스 + 블로그 + 웹문서)
+async function searchNaverWeb(query) {
+  try {
+    if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) {
+      console.log('⚠️ Naver API keys not configured');
+      return [];
+    }
+
+    const headers = {
+      'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID,
+      'X-Naver-Client-Secret': process.env.NAVER_CLIENT_SECRET
+    };
+
+    const results = [];
+
+    // 네이버 뉴스 검색
+    try {
+      const newsResponse = await axios.get('https://openapi.naver.com/v1/search/news.json', {
+        params: { query, display: 3, start: 1, sort: 'sim' },
+        headers,
+        timeout: 5000
+      });
+
+      if (newsResponse.data.items) {
+        newsResponse.data.items.forEach((item, index) => {
+          results.push({
+            id: Date.now() + index,
+            title: item.title.replace(/<[^>]*>/g, ''),
+            author: '네이버 뉴스',
+            year: item.pubDate ? new Date(item.pubDate).getFullYear().toString() : new Date().getFullYear().toString(),
+            type: 'web',
+            thumbnail: '📰',
+            url: item.link,
+            summary: item.description.replace(/<[^>]*>/g, '')
+          });
+        });
+      }
+    } catch (error) {
+      console.log('⚠️ Naver News API error:', error.message);
+    }
+
+    // 네이버 블로그 검색
+    try {
+      const blogResponse = await axios.get('https://openapi.naver.com/v1/search/blog.json', {
+        params: { query, display: 4, start: 1, sort: 'sim' },
+        headers,
+        timeout: 5000
+      });
+
+      if (blogResponse.data.items) {
+        blogResponse.data.items.forEach((item, index) => {
+          results.push({
+            id: Date.now() + index + 1000,
+            title: item.title.replace(/<[^>]*>/g, ''),
+            author: item.bloggername || '블로거',
+            year: item.postdate ? item.postdate.substring(0, 4) : new Date().getFullYear().toString(),
+            type: 'web',
+            thumbnail: '📝',
+            url: item.link,
+            summary: item.description.replace(/<[^>]*>/g, '')
+          });
+        });
+      }
+    } catch (error) {
+      console.log('⚠️ Naver Blog API error:', error.message);
+    }
+
+    // 네이버 웹문서 검색
+    try {
+      const webResponse = await axios.get('https://openapi.naver.com/v1/search/webkr.json', {
+        params: { query, display: 3, start: 1 },
+        headers,
+        timeout: 5000
+      });
+
+      if (webResponse.data.items) {
+        webResponse.data.items.forEach((item, index) => {
+          results.push({
+            id: Date.now() + index + 2000,
+            title: item.title.replace(/<[^>]*>/g, ''),
+            author: new URL(item.link).hostname,
+            year: new Date().getFullYear().toString(),
+            type: 'web',
+            thumbnail: '🌐',
+            url: item.link,
+            summary: item.description.replace(/<[^>]*>/g, '')
+          });
+        });
+      }
+    } catch (error) {
+      console.log('⚠️ Naver Web API error:', error.message);
+    }
+
+    return results.slice(0, 10); // 최대 10개 반환
+
+  } catch (error) {
+    console.error('⚠️ Naver Web Search error:', error.message);
+    return [];
   }
 }
 

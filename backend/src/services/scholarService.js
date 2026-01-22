@@ -1,25 +1,80 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-// RISS 학술연구정보서비스 API를 통한 실제 논문 검색
+// 네이버 학술 검색 API를 통한 실제 논문 검색
 async function searchAcademic(query) {
   try {
     console.log('🔍 Searching academic papers for:', query);
     
-    // RISS API 호출 (무료, API 키 불필요)
+    // 네이버 학술 검색 API 호출 (실제 데이터!)
+    const naverResults = await searchNaverAcademic(query);
+    if (naverResults && naverResults.length > 0) {
+      console.log(`✅ Found ${naverResults.length} papers from Naver`);
+      return naverResults;
+    }
+
+    // 네이버 실패 시 RISS API 호출
     const rissResults = await searchRISS(query);
     if (rissResults && rissResults.length > 0) {
       console.log(`✅ Found ${rissResults.length} papers from RISS`);
       return rissResults;
     }
 
-    // RISS 실패 시 시뮬레이션
-    console.log('⚠️ RISS API unavailable, using smart simulation');
+    // 모두 실패 시 시뮬레이션
+    console.log('⚠️ All academic APIs unavailable, using smart simulation');
     return simulateAcademicSearch(query);
 
   } catch (error) {
     console.error('⚠️ Scholar search error:', error.message);
     return simulateAcademicSearch(query);
+  }
+}
+
+// 네이버 학술 검색 API (실제 데이터!)
+async function searchNaverAcademic(query) {
+  try {
+    if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) {
+      console.log('⚠️ Naver API keys not configured');
+      return [];
+    }
+
+    const response = await axios.get('https://openapi.naver.com/v1/search/doc.json', {
+      params: {
+        query: query,
+        display: 10,
+        start: 1,
+        sort: 'sim' // sim(유사도순), date(날짜순)
+      },
+      headers: {
+        'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID,
+        'X-Naver-Client-Secret': process.env.NAVER_CLIENT_SECRET
+      },
+      timeout: 5000
+    });
+
+    if (response.data && response.data.items && response.data.items.length > 0) {
+      return response.data.items.map((item, index) => ({
+        id: Date.now() + index,
+        title: item.title.replace(/<[^>]*>/g, ''), // HTML 태그 제거
+        author: item.author || '저자 미상',
+        publisher: item.publisher || '학술지',
+        year: item.pubDate || new Date().getFullYear().toString(),
+        type: 'academic',
+        thumbnail: '📄',
+        doi: '',
+        summary: item.description.replace(/<[^>]*>/g, ''), // HTML 태그 제거
+        library: {
+          available: !!item.link,
+          locations: item.link ? ['네이버 학술정보'] : []
+        },
+        url: item.link
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error('⚠️ Naver Academic API error:', error.message);
+    return [];
   }
 }
 
