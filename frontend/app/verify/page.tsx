@@ -35,8 +35,30 @@ export default function VerifyPage() {
     e.preventDefault()
     setIsLoading(true)
     
-    // 시뮬레이션: 실제로는 백엔드 API를 호출
-    setTimeout(() => {
+    try {
+      // 백엔드 API 호출
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/api/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputType,
+          content
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('검증 요청에 실패했습니다');
+      }
+
+      const data = await response.json();
+      setResult(data);
+    } catch (error) {
+      console.error('검증 오류:', error);
+      alert('검증 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      // 오류 시 시뮬레이션 데이터로 fallback
       setResult({
         trustLevel: 'caution',
         summary: '이 정보는 일부 출처에서만 확인되었습니다. 추가적인 검증이 필요합니다.',
@@ -200,9 +222,10 @@ export default function VerifyPage() {
             }
           ]
         }
-      })
-      setIsLoading(false)
-    }, 2000)
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const getTrustLevelColor = (level: string) => {
