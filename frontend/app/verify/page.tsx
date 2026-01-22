@@ -340,7 +340,22 @@ export default function VerifyPage() {
       onClick={() => setSelectedSource(source)}
     >
       <div className="flex gap-4">
-        <div className="text-4xl flex-shrink-0">{source.thumbnail}</div>
+        <div className="flex-shrink-0 w-16 h-20">
+          {source.thumbnail && source.thumbnail.startsWith('http') ? (
+            <img 
+              src={source.thumbnail} 
+              alt={source.title}
+              className="w-full h-full object-cover rounded shadow-sm"
+              onError={(e) => {
+                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">📚</text></svg>';
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded text-4xl">
+              {source.thumbnail || '📄'}
+            </div>
+          )}
+        </div>
         <div className="flex-1">
           <h4 className="font-bold text-gray-900 mb-1 line-clamp-2">{source.title}</h4>
           <p className="text-sm text-gray-600 mb-2">
